@@ -1,0 +1,10 @@
+
+\.idea/
+
+__pycache__/
+
+*.png
+
+*.jpg
+
+*.psd
