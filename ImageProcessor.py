@@ -13,7 +13,8 @@ class ImageProcessor:
 
     def __init__(self, ih):
         self.ImageHandler = ih
-        self.processed_image, self.grayscale_image, self.hsv_image, self.countours = None, None, None, []
+        self.processed_image, self.grayscale_image, self.hsv_image, self.countours, self.mask = \
+            None, None, None, [], None
 
     def cvt_grayscale(self):
         self.grayscale_image = cv2.cvtColor(self.ImageHandler.image, cv2.COLOR_BGR2GRAY)
@@ -24,8 +25,7 @@ class ImageProcessor:
         self.processed_image = self.hsv_image
 
     def filter_hsv(self, lower, upper):
-        self.mask = cv2.inRange(self.hsv_image, lower, upper)
-        self.processed_image = self.mask
+        self.processed_image = cv2.inRange(self.hsv_image, lower, upper)
 
     def get_hsv_avg(self):
         x, y, _ = self.hsv_image.shape
@@ -60,24 +60,21 @@ class ImageProcessor:
     def hsv_thresh(self, low, high):
         pass
 
-    def threshold(self, pixels):
-        pass
-
     def remove_background(self):
         self.cvt_grayscale()
         self.cvt_hsv()
         h_high = self.get_background_h_high()
         self.filter_hsv((h_high, 0, 0), (180, 255, 255))
 
-    def filter_size(self, pixel_size):
-        _, cnt, _ = cv2.findContours(self.processed_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        for c in cnt:
-            if cv2.contourArea(c) > pixel_size:
-                self.countours.append(c)
+    def create_tarp_mask(self):
+        self.mask = cv2.inRange(self.hsv_image, (20, 0, 0), (180, 255, 255))
+        self.processed_image = cv2.bitwise_and(self.hsv_image, self.hsv_image, mask=self.mask)
 
-        cv2.drawContours(self.ImageHandler.image, self.countours, -1, (150, 200), 1)
+
+
 
     def debug(self):
-        cv2.imshow("Original", self.ImageHandler.image)
+        #cv2.imshow("Original", self.ImageHandler.image)
         cv2.imshow("Processed", self.processed_image)
+        #cv2.imshow("Mask", self.mask)
         cv2.waitKey(0)

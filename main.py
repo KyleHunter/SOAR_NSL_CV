@@ -20,7 +20,7 @@ single_tarp_area = tc.get_tarp_area(current_altitude)  # pixels^3
 single_tarp_area = 3000  # place holder
 
 ip.remove_background()
-ip.filter_size(single_tarp_area * 0.70)
+ip.create_tarp_mask()
 ip.debug()
 
 
