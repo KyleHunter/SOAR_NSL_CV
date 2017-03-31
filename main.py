@@ -19,8 +19,9 @@ current_altitude = 500  # ft
 single_tarp_area = tc.get_tarp_area(current_altitude)  # pixels^3
 single_tarp_area = 3000  # place holder
 
-ip.remove_background()
 ip.create_tarp_mask()
+ip.filter_by_size((500, 5000))
+ip.get_tarps()
 ip.debug()
 
 
