@@ -9,12 +9,12 @@ import cv2
 import numpy as np
 import collections
 
-class ImageProcessor:
 
+class ImageProcessor:
     def __init__(self, ih):
         self.ImageHandler = ih
-        self.processed_image, self.grayscale_image, self.hsv_image, self.countours, self.mask, self.yellow_tarp, \
-        self.threshold_image = None, None, None, [], None, None, None
+        self.processed_image, self.grayscale_image, self.hsv_image, self.contours, self.mask, self.threshold_image, \
+            self.red_mask, self.blue_mask, self.yellow_mask = None, None, None, [], None, None, None, None, None
 
     def cvt_grayscale(self):
         self.grayscale_image = cv2.cvtColor(self.ImageHandler.image, cv2.COLOR_BGR2GRAY)
@@ -31,27 +31,6 @@ class ImageProcessor:
         x, y, _ = self.hsv_image.shape
         h_avg, s_avg, v_avg = np.average(np.average(self.hsv_image, 0), 0)
         h_avg, s_avg, v_avg = int(h_avg), int(s_avg), int(v_avg)
-        '''
-        h_c, s_c, v_c, h_avg1, s_avg1, v_avg1 = 1, 1, 1, 0, 0, 0
-        for i in range(0, x):
-            for j in range(0, y):
-
-                if self.hsv_image[i, j, 0] > 50:
-                    h_avg1 += self.hsv_image[i, j, 0]
-                    h_c += 1
-
-                if self.hsv_image[i, j, 1] > 50:
-                    s_avg1 += self.hsv_image[i, j, 1]
-                    s_c += 1
-
-                if self.hsv_image[i, j, 2] > 50:
-                    v_avg1 += self.hsv_image[i, j, 2]
-                    v_c += 1
-
-        #print(int(h_avg1 / h_c) + 5)
-
-        return h_avg1 / h_c, s_avg1 / s_c, v_avg1 / v_c
-        '''
         return h_avg, s_avg, v_avg
 
     def get_background_h_high(self):
@@ -83,7 +62,7 @@ class ImageProcessor:
         temp = cv2.bitwise_and(self.hsv_image, self.hsv_image, mask=self.mask)
         y, x, _ = temp.shape
         self.processed_image = temp
-        temp = cv2.resize(temp, (int(x*0.5), int(y*0.5)))
+        temp = cv2.resize(temp, (int(x * 0.5), int(y * 0.5)))
         x, y, _ = temp.shape
         mylist = []
         for i in range(0, x):
@@ -97,8 +76,33 @@ class ImageProcessor:
         if len(tarp_hues) == 3:
             print('Thank God')
 
-        self.mask = cv2.inRange(self.processed_image, (int(tarp_hues[0] - 10), 0, 0), (int(tarp_hues[0] + 10), 255, 255))
-        self.processed_image = cv2.bitwise_and(self.processed_image, self.processed_image, mask=self.mask)
+            self.yellow_mask = cv2.inRange(self.processed_image,
+                                           (int(tarp_hues[0] - 10), 0, 0), (int(tarp_hues[0] + 10), 255, 255))
+
+            self.blue_mask = cv2.inRange(self.processed_image,
+                                         (int(tarp_hues[1] - 10), 0, 0), (int(tarp_hues[1] + 10), 255, 255))
+
+            self.red_mask = cv2.inRange(self.processed_image,
+                                        (int(tarp_hues[2] - 10), 0, 0), (int(tarp_hues[2] + 10), 255, 255))
+
+    def save_tarps(self):
+        yellow = self.ImageHandler.image.copy()
+        _, cnts, _ = cv2.findContours(self.yellow_mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(yellow, cnts, -1, (0, 255, 0), 2)
+
+        cv2.imwrite("out/yellow.png", yellow)
+
+        blue = self.ImageHandler.image.copy()
+        _, cnts, _ = cv2.findContours(self.blue_mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(blue, cnts, -1, (0, 255, 0), 2)
+
+        cv2.imwrite("out/blue.png", blue)
+
+        red = self.ImageHandler.image.copy()
+        _, cnts, _ = cv2.findContours(self.red_mask.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(red, cnts, -1, (0, 255, 0), 2)
+
+        cv2.imwrite("out/red.png", red)
 
     def get_section_means(self, coll):
         nums = self.get_section_numbers(coll)
@@ -123,12 +127,9 @@ class ImageProcessor:
                 means[i, j] = nums[s]
         return means
 
-
-
-
     def debug(self):
-        #cv2.imshow("Original", self.ImageHandler.image)
+        # cv2.imshow("Original", self.ImageHandler.image)
         cv2.imshow("Processed", self.processed_image)
-        #cv2.imshow("ssa", self.edges)
-        #cv2.imshow("Mask", self.mask)
+        # cv2.imshow("ssa", self.edges)
+        # cv2.imshow("Mask", self.mask)
         cv2.waitKey(0)
