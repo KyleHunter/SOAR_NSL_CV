@@ -47,11 +47,10 @@ class ImageProcessor:
         temp = cv2.bitwise_and(self.hsv_image, self.hsv_image, mask=self.mask)  # Masks off background on HSV image
         self.processed_image = temp
         y, x, _ = temp.shape
-        temp = cv2.resize(temp, (int(x * 0.5), int(y * 0.5)))
-        x, y, _ = temp.shape
 
-        hue_vals = [temp[i, j, 0] for i in range(0, x) for j in range(0, y) if temp[i, j, 0] != 0]
-        counter = collections.Counter(hue_vals)
+        hues = temp[:, :, 0]
+        hues = hues[np.nonzero(hues)]
+        counter = collections.Counter(hues)
         tarp_hues = self.get_section_means(counter.most_common(50))
 
         if len(tarp_hues) == 3:
