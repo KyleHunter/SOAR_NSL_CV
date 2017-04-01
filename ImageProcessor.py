@@ -8,6 +8,7 @@
 import cv2
 import numpy as np
 import collections
+import warnings
 
 
 class ImageProcessor:
@@ -24,7 +25,7 @@ class ImageProcessor:
         h_avg, s_avg, v_avg = int(h_avg), int(s_avg), int(v_avg)
         return h_avg, s_avg, v_avg
 
-    def create_tarp_mask(self):
+    def create_background_mask(self):
         self.hsv_image = self.ImageHandler.cvt_to_hsv()
         h_high = self.get_hsv_avg()[0] + 5
         self.mask = cv2.inRange(self.hsv_image, (h_high, 0, 0), (180, 255, 255))  # Creates mask removing background
@@ -36,7 +37,7 @@ class ImageProcessor:
         _, contours, _ = cv2.findContours(self.threshold_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         i = 0
         for c in contours:
-            if cv2.contourArea(c) in range(size[0], size[1]):
+            if size[0] < cv2.contourArea(c) < size[1]:
                 cv2.drawContours(self.processed_image, contours, i, (255, 255, 255), -1)
             i += 1
         self.grayscale_image = cv2.cvtColor(self.processed_image, cv2.COLOR_BGR2GRAY)
@@ -66,7 +67,11 @@ class ImageProcessor:
         for i in range(0, 3):
             img = self.ImageHandler.out_image.copy()
             _, cnts, _ = cv2.findContours(self.tarp_masks[i].copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            cv2.drawContours(img, cnts, -1, (0, 255, 0), 2)
+            h = 0
+            for c in cnts:
+                if cv2.contourArea(c) > 100:  # TODO add proper size check
+                    cv2.drawContours(img, cnts, h, (0, 255, 0), 2)
+                h += 1
 
             cv2.imwrite("out/" + str(files[i]) + ".png", img)
 
@@ -74,7 +79,7 @@ class ImageProcessor:
     def get_section_numbers(coll):
         nums = [coll[x][0] for x in range(0, len(coll)) if coll[x][1] > 30]  #  Only gets Hues with frequency > 30
         nums = np.sort(nums)
-        means = np.zeros((10, 10))
+        means = np.zeros((50, 50))
         i, j = 0, 0
         for s in range(0, len(nums) - 1):
             if nums[s + 1] in range(nums[s] - 5, nums[s] + 5):
@@ -90,7 +95,9 @@ class ImageProcessor:
     def get_section_means(self, coll):
         nums = self.get_section_numbers(coll)
         nums[nums == 0] = np.nan
-        val = np.nanmean(nums, axis=1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            val = np.nanmean(nums, axis=1)
         val = val[~np.isnan(val)]
         return val
 
