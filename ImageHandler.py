@@ -9,18 +9,24 @@ import cv2
 
 
 class ImageHandler:
-
     def __init__(self, testing):
-        if not testing:
-            print("Error: Not Implemented")
         self.testing, self.out_image, self._original_image = testing, None, None
+
+    def is_blurry(self):
+        focus = cv2.Laplacian(self.cvt_to_grayscale(), cv2.CV_64F).var()
+        if focus < 50:
+            return True
+        else:
+            return False
 
     def take_image(self):
         if self.testing:
-            self._original_image = cv2.imread('simulated_launch_1500ft.jpg', cv2.IMREAD_COLOR)
+            self._original_image = cv2.imread('tarps.jpg', cv2.IMREAD_COLOR)
             self.out_image = self._original_image
         else:
-            pass
+            cap = cv2.VideoCapture(0)
+            _, self._original_image = cap.read()
+            self.out_image = self._original_image
 
     def show_image(self):
         cv2.imshow('image', self.out_image)
