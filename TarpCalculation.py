@@ -15,4 +15,3 @@ def get_tarp_area(altitude):
 
 def get_total_tarp_area(altitude):
     return get_tarp_area(altitude) * 3
-

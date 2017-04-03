@@ -6,15 +6,30 @@
 *   Currently a place holder loading a static image
 '''
 import cv2
+import numpy as np
 
 
 class ImageHandler:
     def __init__(self, testing, ei):
         self.testing, self.out_image, self._original_image, self.ei = testing, None, None, ei
+        self.take_image()
+
+    def camera_error(self):
+        if self.is_valid_image():
+            return False
+        else:
+            return True
 
     def is_blurry(self):
         focus = cv2.Laplacian(self.cvt_to_grayscale(), cv2.CV_64F).var()
         if focus < 50:
+            return True
+        else:
+            return False
+
+    def is_valid_image(self):
+        self.take_image()
+        if np.mean(self.out_image) > 20:
             return True
         else:
             return False
@@ -25,8 +40,10 @@ class ImageHandler:
             self.out_image = self._original_image
         else:
             cap = cv2.VideoCapture(0)
-            _, self._original_image = cap.read()
+            for i in range(0, 10):
+                _, self._original_image = cap.read()
             self.out_image = self._original_image
+            cap.release()
 
     def show_image(self):
         cv2.imshow('image', self.out_image)
