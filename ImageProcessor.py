@@ -12,10 +12,10 @@ import warnings
 
 
 class ImageProcessor:
-    def __init__(self, ih):
+    def __init__(self, ih, ei):
         self.ImageHandler = ih
         self.processed_image, self.grayscale_image, self.hsv_image, self.contours, self.mask, self.threshold_image, \
-            self.tarp_masks = None, None, None, [], None, None, [0, 0, 0]
+            self.tarp_masks, self.ei = None, None, None, [], None, None, [0, 0, 0], ei
 
     def filter_hsv(self, lower, upper):
         self.processed_image = cv2.inRange(self.hsv_image, lower, upper)

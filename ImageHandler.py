@@ -9,8 +9,8 @@ import cv2
 
 
 class ImageHandler:
-    def __init__(self, testing):
-        self.testing, self.out_image, self._original_image = testing, None, None
+    def __init__(self, testing, ei):
+        self.testing, self.out_image, self._original_image, self.ei = testing, None, None, ei
 
     def is_blurry(self):
         focus = cv2.Laplacian(self.cvt_to_grayscale(), cv2.CV_64F).var()

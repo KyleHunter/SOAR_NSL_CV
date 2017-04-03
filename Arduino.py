@@ -7,6 +7,9 @@ class Arduino:
     address = 0x04
     ALTREQONE, ALTREQTWO, ERRORCODEREQ, DISTREQONE, DISTREQTWO = 0, 1, 2, 3, 4
 
+    def __init__(self, ei):
+        self.ei = ei
+
     def write_number(self, value):
         self.bus.write_byte(self.address, value)
 
