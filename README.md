@@ -6,6 +6,11 @@
 - Built by students in SOAR ([Society Of Aeronautics and Rockety](http://www.usfsoar.com/)) at USF ([University of South Florida](http://www.usf.edu/))
 
 ## Error Codes
+##### Format: Red:Red:Red:Green 
 - 1000: No communications between Arduino and Raspberry Pi
 - 1100: Very dark image taken. Maybe lens cap on (Seriously?), lens focus off, usb cable disconnected, ect..
-
+- 1110: No communications with 10DOF board
+- 0110: No Communications with GPS 
+- 0001(Flashing): No error, searching for GPS fix
+- 1010: No clue, bad exception error
+- 0001(Solid): No error, GPS fixed
