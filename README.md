@@ -14,3 +14,4 @@
 - 0001(Flashing): No error, searching for GPS fix
 - 1010: No clue, bad exception error
 - 0001(Solid): No error, GPS fixed
+- 1111(Solid): Waiting for start command

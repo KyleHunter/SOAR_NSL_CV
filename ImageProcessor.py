@@ -71,8 +71,8 @@ class ImageProcessor:
         else:
             logging.info("Too many bins found..")
 
-    def save_tarps(self, counter):
-        random.seed()
+    def save_tarps(self, counter, size):
+        random.seed()  # TODO REmove
         files = ['yellow', 'blue', 'red']
         s, cnt_areas = 0, [0, 0, 0]
         os.makedirs("out/" + str(counter))
@@ -84,7 +84,7 @@ class ImageProcessor:
             h = 0
 
             for c in cnts:
-                if cv2.contourArea(c) > 100:  # TODO add proper size check
+                if cv2.contourArea(c) > size * 0.2:
                     cv2.drawContours(img, cnts, h, (0, 255, 0), 2)
                     cnt_areas[s] = cv2.contourArea(c)
                 h += 1
@@ -93,7 +93,7 @@ class ImageProcessor:
             img = cv2.resize(img, (0, 0), fx=0.5, fy=0.5)
 
             cv2.imwrite("out/" + str(counter) + "/" + str(files[i]) + ".png", img)
-        score = np.ptp(cnt_areas) + random.randrange(0, 5000)
+        score = np.ptp(cnt_areas) + random.randrange(0, 5000)  # TODO REmove
         self.scores.append(score)
         logging.info("File: " + str(counter) + " Score: " + str(score))
 

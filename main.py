@@ -29,7 +29,8 @@ class main:
         if os.path.exists("log.txt"):
             os.remove("log.txt")
 
-        logging.basicConfig(filename='log.txt', level=logging.DEBUG, format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+        logging.basicConfig(filename='log.txt', level=logging.DEBUG,
+                            format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
     def standby(self):
         if self.check_arduino(False):
@@ -52,12 +53,15 @@ class main:
         if main.arduino.get_gps_error():
             self.ei.message([0, 1, 1, 0])
             success = False
+        if success:
+            self.ei.message([0, 0, 0, 0])
         return success
 
     def check_pi(self):
         if self.ih.camera_error():
             self.ei.message([1, 1, 0, 0])
             return False
+        self.ei.message([0, 0, 0, 0])
         return True
 
     def run(self, count):
@@ -71,24 +75,32 @@ class main:
         logging.info("Current Distance: " + str(current_distance))
 
 
-        #single_tarp_area = Tc.get_total_tarp_area(current_altitude, current_distance)  # pixels^3
-        single_tarp_area = 3000  # place holder
+        #total_tarp_are = Tc.get_total_tarp_area(current_altitude, current_distance)  # pixels^3
+        #single_tarp_area = Tc.get_single_tarp_area(current_altitude, current_distance)  # pixels^3
+        single_tarp_area = 1000  # TODO temp holder
+        total_tarp_are = 4000  # TODO temp holder
 
         logging.info("Creating Background Mask")
-        self.processor.create_background_mask()  # 0.1
+        self.processor.create_background_mask()
         logging.info("Filtering by size")
-        self.processor.filter_by_size((3000, 4000))  # 0.007
+        self.processor.filter_by_size((total_tarp_are * 0.6, total_tarp_are))  # 0.007 TODO allow method to control size and adjust like blur_thresh
         logging.info("Getting Tarp Mask")
-        self.processor.get_tarps()  # 0.015
+        self.processor.get_tarps()
         logging.info("Saving Tarps")
-        self.processor.save_tarps(count)  # 0.19
+        self.processor.save_tarps(count, single_tarp_area)
 
     def init(self):
         return self.check_arduino(True) and self.check_pi()
 
-is_deployed, is_in_rocket = False, False
+is_deployed, is_in_rocket, waiting_to_start = False, False, True
 
 main = main()
+
+while waiting_to_start:
+    main.ei.message([1, 1, 1, 1])
+    time.sleep(5)
+
+main.ei.message([0, 0, 0, 0])
 
 logging.info("Initializing main")
 if not main.init():
@@ -99,15 +111,18 @@ logging.info("Main Initialized")
 
 while not is_in_rocket:
     logging.info("Waiting to be inside rocket")
-    main.check_arduino(False)
-    main.check_pi()
     time.sleep(1)
+
     while not main.arduino.gps_has_fix():
         main.standby()
         if is_in_rocket:
             break
         break  # TODO Uncomment
-    is_in_rocket = True
+
+    if main.check_arduino(False) and main.check_pi():
+        main.ei.message([0, 0, 0, 1])
+
+    is_in_rocket = True  # TODO Uncomment
 logging.info("Inside Rocket")
 
 while is_in_rocket:
@@ -115,8 +130,8 @@ while is_in_rocket:
     if not main.arduino.gps_has_fix():
         logging.info("Inside rocket, no GPS fix..")
     time.sleep(1)
-    is_in_rocket = False
-    is_deployed = True
+    is_in_rocket = False  # TODO Uncomment
+    is_deployed = True  # TODO Uncomment
 logging.info("Ejected!")
 
 counter = 0
@@ -125,14 +140,14 @@ t = time.time()
 while is_deployed:
     if time.time() - t > 5:  # TODO Remove
         break
-    if main.arduino.get_altitude() < 30:
+    '''if main.arduino.get_altitude() < 10:
         false_positive = False
         for i in range(0, 10):
-            if main.arduino.get_altitude() > 30:  # So a goofy missread doesn't screw us
+            if main.arduino.get_altitude() > 10:  # So a goofy missread doesn't screw us
                 false_positive = True
         if not false_positive:
-            logging.info("Below 30m, Quiting!")
-            break
+            logging.info("Below 10m, Quiting!")
+            break'''
     main.run(counter)
     counter += 1
 
