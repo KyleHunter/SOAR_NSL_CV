@@ -7,24 +7,30 @@
 '''
 import cv2
 import numpy as np
+import logging
 
 
 class ImageHandler:
     def __init__(self, testing, ei):
-        self.testing, self.out_image, self._original_image, self.ei = testing, None, None, ei
+        self.testing, self.out_image, self._original_image, self.ei, self.blur_thresh = testing, None, None, ei, 100
         self.take_image()
 
     def camera_error(self):
         if self.is_valid_image():
+            logging.info("Camera took valid image, no error")
             return False
         else:
             return True
 
     def is_blurry(self):
         focus = cv2.Laplacian(self.cvt_to_grayscale(), cv2.CV_64F).var()
-        if focus < 50:
+        if focus < self.blur_thresh:
+            self.blur_thresh += 20  # Ensure we at least take some pics..
+            logging.info("Blurry image, blur_thresh = " + str(self.blur_thresh))
             return True
         else:
+            self.blur_thresh = 100
+            logging.info("Clear image, blur_thresh = " + str(self.blur_thresh))
             return False
 
     def is_valid_image(self):
@@ -38,12 +44,14 @@ class ImageHandler:
         if self.testing:
             self._original_image = cv2.imread('tarps.jpg', cv2.IMREAD_COLOR)
             self.out_image = self._original_image
+            return True
         else:
             cap = cv2.VideoCapture(0)
-            for i in range(0, 10):
+            for i in range(0, 3):  # First couple frames are garbage
                 _, self._original_image = cap.read()
             self.out_image = self._original_image
             cap.release()
+            return not self.is_blurry()
 
     def show_image(self):
         cv2.imshow('image', self.out_image)
