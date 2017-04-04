@@ -104,6 +104,8 @@ while not is_in_rocket:
     time.sleep(1)
     while not main.arduino.gps_has_fix():
         main.standby()
+        if is_in_rocket:
+            break
         break  # TODO Uncomment
     is_in_rocket = True
 logging.info("Inside Rocket")
@@ -121,8 +123,16 @@ counter = 0
 
 t = time.time()
 while is_deployed:
-    if time.time() - t > 5:
+    if time.time() - t > 5:  # TODO Remove
         break
+    if main.arduino.get_altitude() < 30:
+        false_positive = False
+        for i in range(0, 10):
+            if main.arduino.get_altitude() > 30:  # So a goofy missread doesn't screw us
+                false_positive = True
+        if not false_positive:
+            logging.info("Below 30m, Quiting!")
+            break
     main.run(counter)
     counter += 1
 
