@@ -10,8 +10,8 @@ import numpy as np
 import collections
 import warnings
 import logging
-import random
 import os
+
 
 class ImageProcessor:
     def __init__(self, ih, ei):
@@ -72,7 +72,6 @@ class ImageProcessor:
             logging.info("Too many bins found..")
 
     def save_tarps(self, counter, size):
-        random.seed()  # TODO REmove
         files = ['yellow', 'blue', 'red']
         s, cnt_areas = 0, [0, 0, 0]
         os.makedirs("out/" + str(counter))
@@ -93,7 +92,7 @@ class ImageProcessor:
             img = cv2.resize(img, (0, 0), fx=0.5, fy=0.5)
 
             cv2.imwrite("out/" + str(counter) + "/" + str(files[i]) + ".png", img)
-        score = np.ptp(cnt_areas) + random.randrange(0, 5000)  # TODO REmove
+        score = np.ptp(cnt_areas)
         self.scores.append(score)
         logging.info("File: " + str(counter) + " Score: " + str(score))
 
