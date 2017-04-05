@@ -15,10 +15,9 @@ class ErrorIndicator:
     def __init__(self, testing):
         self.testing = testing
         if not testing:
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setwarnings(False)
             for pin in self.LEDPINS:
                 GPIO.setup(pin, GPIO.OUT)
+            GPIO.setup(23, GPIO.OUT)
 
     def _turn_led(self, led_num, on):  # 0 =< led_num =< 3
         if not self.testing:
@@ -27,7 +26,14 @@ class ErrorIndicator:
             else:
                 GPIO.output(self.LEDPINS[led_num], GPIO.LOW)
 
+    @staticmethod
+    def _sound_buzzer(binary_order):  # Buzzer hot to GPIO 23
+        if binary_order == [0, 0, 0, 0] or binary_order == [0, 0, 0, 1]:
+            GPIO.GPIO.output(23, GPIO.LOW)
+        GPIO.GPIO.output(23, GPIO.HIGH)
+
     def message(self, binary_order):
+        self._sound_buzzer(binary_order)
         if not self.testing:
             i = 0
             for b in binary_order:
@@ -35,3 +41,6 @@ class ErrorIndicator:
                 i += 1
         else:
             print("Error code: ", binary_order)
+
+    def reset(self):
+        self.message([0, 0, 0, 0])
