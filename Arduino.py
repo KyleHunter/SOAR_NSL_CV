@@ -7,8 +7,8 @@ class Arduino:
     address = 0x04
     ALTREQONE, ALTREQTWO, ERRORCODEREQ, DISTREQONE, DISTREQTWO, INITREQ, \
     INITDOFREQ, INITGPSREQ, GPSFIXREQ, SHUTDOWN, LATREQONE, LATREQTWO, LATREQTHREE, \
-    LATREQFOUR, LONREQONE, LONREQTWO, LONREQTHREE, LONREQFOUR, \
-        = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
+    LATREQFOUR, LONREQONE, LONREQTWO, LONREQTHREE, LONREQFOUR, ISDEPLOYED\
+        = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
 
     def __init__(self, ei):
         self.ei = ei
@@ -75,6 +75,13 @@ class Arduino:
     def gps_has_fix(self):
         self._write_number(self.GPSFIXREQ)
         return self._read_number()
+
+    def lander_is_deployed(self):
+        self._write_number(self.ISDEPLOYED)
+        return self._read_number()
+
+    def shutdown(self):
+        self._write_number(self.SHUTDOWN)
 
     def init(self):
         self._write_number(self.INITREQ)
