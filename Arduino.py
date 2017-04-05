@@ -6,17 +6,47 @@ class Arduino:
     bus = smbus.SMBus(1)
     address = 0x04
     ALTREQONE, ALTREQTWO, ERRORCODEREQ, DISTREQONE, DISTREQTWO, INITREQ, \
-    INITDOFREQ, INITGPSREQ, GPSFIXREQ, = 0, 1, 2, 3, 4, 5, 6, 7, 8
+    INITDOFREQ, INITGPSREQ, GPSFIXREQ, SHUTDOWN, LATREQONE, LATREQTWO, LATREQTHREE, \
+    LATREQFOUR, LONREQONE, LONREQTWO, LONREQTHREE, LONREQFOUR, \
+        = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
 
     def __init__(self, ei):
         self.ei = ei
 
     def _write_number(self, value):
         self.bus.write_byte(self.address, value)
+        time.sleep(0.2)
 
     def _read_number(self):
-        number = self.bus.read_byte(self.address)
-        return number
+        return self.bus.read_byte(self.address)
+
+    def get_lattitude(self):
+        self._write_number(self.LATREQONE)
+        byte_one = self._read_number()
+
+        self._write_number(self.LATREQTWO)
+        byte_two = self._read_number()
+
+        self._write_number(self.LATREQTHREE)
+        byte_three = self._read_number()
+
+        self._write_number(self.LATREQFOUR)
+        byte_four = self._read_number()
+        return float(str(byte_one) + "." + str(byte_two) + str(byte_three) + str(byte_four))
+
+    def get_longitude(self):
+        self._write_number(self.LONREQONE)
+        byte_one = self._read_number()
+
+        self._write_number(self.LONREQTWO)
+        byte_two = self._read_number()
+
+        self._write_number(self.LONREQTHREE)
+        byte_three = self._read_number()
+
+        self._write_number(self.LONREQFOUR)
+        byte_four = self._read_number()
+        return float(str(byte_one) + "." + str(byte_two) + str(byte_three) + str(byte_four))
 
     def get_altitude(self):
         self._write_number(self.ALTREQONE)
