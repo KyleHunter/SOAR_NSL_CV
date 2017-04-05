@@ -13,15 +13,22 @@ import time
 import logging
 import os
 import shutil
+import RPi.GPIO as GPIO
 
 
 class main:
-
     def __init__(self):
-        self.ei = ErrorIndicator(True)
-        self.ih = ImageHandler(True, self.ei)  # TODO Be False
+        """
+        Set's up program variables, resets files, does not tell arduino to start
+        """
+        self.ei = ErrorIndicator(False)
+        self.ih = ImageHandler(False, self.ei)
         self.processor = ImageProcessor(self.ih, self.ei)
         self.arduino = Arduino(self.ei)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(24, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(25, GPIO.IN)
+        GPIO.setwarnings(False)
 
         if os.path.exists("out/"):
             shutil.rmtree("out")
@@ -32,21 +39,31 @@ class main:
         logging.basicConfig(filename='log.txt', level=logging.DEBUG,
                             format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    def standby(self):
-        if self.check_arduino(False):
+    def check_for_gps_fix(self):
+        """
+        Checks for GPS fix, flashes error if not
+        :return: True if GPS has a fix
+        """
+        if not main.arduino.gps_has_fix():
             logging.info("Waiting for GPS fix..")
             self.ei.message([0, 0, 0, 1])
             time.sleep(0.5)
             self.ei.message([0, 0, 0, 0])
             time.sleep(0.5)
-            return True
+            return False
+        return True
 
     def check_arduino(self, initial):
+        """
+        Checks to make sure arduino sensors are working, no check for GPS fix
+        :param initial: First time being called, checks if comms with arduino work
+        :return: If no errors are present
+        """
         success = True
         if initial:
             if not main.arduino.init():
                 self.ei.message([1, 0, 0, 0])
-                success = False
+                return False
         if main.arduino.get_dof_error():
             self.ei.message([1, 1, 1, 0])
             success = False
@@ -54,103 +71,137 @@ class main:
             self.ei.message([0, 1, 1, 0])
             success = False
         if success:
-            self.ei.message([0, 0, 0, 0])
+            self.ei.reset()
         return success
 
-    def check_pi(self):
+    def check_pi(self):  # TODO handle exception issue
+        """
+        Checks if the camera on Pi is working
+        :return: False if camera is too dark
+        """
         if self.ih.camera_error():
             self.ei.message([1, 1, 0, 0])
             return False
-        self.ei.message([0, 0, 0, 0])
+        self.ei.reset()
         return True
 
     def run(self, count):
+        """
+        Method run while lander is in decent
+        :param count: Number of loops called (Used for logger)
+        """
         logging.info("*********************" + str(count) + "*********************")
-        #current_altitude = self.arduino.get_altitude() * 3.28084  # ft
-        current_altitude = 500  # TODO temp holder
+        current_altitude = self.arduino.get_altitude() * 3.28084  # ft
         logging.info("Current Altitude: " + str(current_altitude))
 
-        #current_distance = self.arduino.get_distance() * 3.28084  # ft
-        current_distance = 400  # TODO temp holder
+        current_distance = self.arduino.get_distance() * 3.28084  # ft
         logging.info("Current Distance: " + str(current_distance))
 
-
-        #total_tarp_are = Tc.get_total_tarp_area(current_altitude, current_distance)  # pixels^3
-        #single_tarp_area = Tc.get_single_tarp_area(current_altitude, current_distance)  # pixels^3
-        single_tarp_area = 1000  # TODO temp holder
-        total_tarp_are = 4000  # TODO temp holder
+        total_tarp_are = Tc.get_total_tarp_area(current_altitude, current_distance)  # pixels^3
+        single_tarp_area = Tc.get_tarp_area(current_altitude, current_distance)  # pixels^3
 
         logging.info("Creating Background Mask")
         self.processor.create_background_mask()
         logging.info("Filtering by size")
-        self.processor.filter_by_size((total_tarp_are * 0.6, total_tarp_are))  # 0.007 TODO allow method to control size and adjust like blur_thresh
+        self.processor.filter_by_size((total_tarp_are * 0.6,
+                                       total_tarp_are))  # 0.007 TODO allow method to control size and adjust like blur_thresh
         logging.info("Getting Tarp Mask")
         self.processor.get_tarps()
         logging.info("Saving Tarps")
         self.processor.save_tarps(count, single_tarp_area)
 
+    @staticmethod
+    def told_to_start():  # Wire GPIO 24 to button to ground
+        """
+        Determines if switch is on, telling us to start the arduino and enter standby
+        :return: True if switch is pressed
+        """
+        if not GPIO.input(24):
+            return True
+        return False
+
+    @staticmethod
+    def is_in_rocket():  # Connect photoresistor to GPIO 25
+        """
+        Checks if lander is in rocket by using a photoresistor
+        :return: True if in rocket
+        """
+        if GPIO.input(25):
+            return True
+        else:
+            return False
+
+    def is_at_low_altitude(self):
+        """
+        Checks if lander is under 10m
+        :return: True if under 10m in air
+        """
+        if self.arduino.get_altitude() < 10:
+            false_positive = False
+            for i in range(0, 10):
+                if main.arduino.get_altitude() > 10:  # So a goofy misread doesn't screw us
+                    false_positive = True
+            if not false_positive:
+                return True
+
     def init(self):
+        """
+        Initializes arduino, turning all sensors on and placing in standby
+        :return: True if arduino and pi have no errors (No check for GPS)
+        """
         return self.check_arduino(True) and self.check_pi()
 
-is_deployed, is_in_rocket, waiting_to_start = False, False, True
-
+#  TODO Wrap Exceptions
 main = main()
 
-while waiting_to_start:
-    main.ei.message([1, 1, 1, 1])
-    time.sleep(5)
+#  Waits for switch to tell Pi to have everything start
+if not main.told_to_start():
+    time.sleep(3)
 
-main.ei.message([0, 0, 0, 0])
-
+#  Starts Arduino and does initial check of all systems (Not looking for GPS fix)
 logging.info("Initializing main")
 if not main.init():
     while not main.check_arduino(False) or not main.check_pi():
-        time.sleep(5)
-        logging.info("Waiting for Arduino or Pi")
+        time.sleep(3)
+        logging.info("Arduino or Pi have errors..")
 logging.info("Main Initialized")
 
-while not is_in_rocket:
+#  Waits outside rocket, checking for errors and GPS fix
+while not main.is_in_rocket():
     logging.info("Waiting to be inside rocket")
-    time.sleep(1)
-
     while not main.arduino.gps_has_fix():
-        main.standby()
-        if is_in_rocket:
-            break
-        break  # TODO Uncomment
+        main.check_for_gps_fix()
+        logging.info("Outside rocket, no GPS fix..")
 
     if main.check_arduino(False) and main.check_pi():
         main.ei.message([0, 0, 0, 1])
-
-    is_in_rocket = True  # TODO Uncomment
+    else:
+        logging.info("Arduino or Pi have errors..")
+    time.sleep(3)
 logging.info("Inside Rocket")
 
-while is_in_rocket:
-    logging.info("Waiting for Erection(Ejection)")
+#  Lander is inside rocket, still checks for errors with arduino(Can hear buzzer)
+while main.is_in_rocket():
+    logging.info("Waiting for Erection")
     if not main.arduino.gps_has_fix():
         logging.info("Inside rocket, no GPS fix..")
-    time.sleep(1)
-    is_in_rocket = False  # TODO Uncomment
-    is_deployed = True  # TODO Uncomment
+    if main.check_arduino(False):
+        main.ei.message([0, 0, 0, 0])  # Can't see the error anyway..
+        logging.info("Inside Rocket, error with Arduino")
+    time.sleep(3)
 logging.info("Ejected!")
 
+#  Lander is outside rocket, no error checks as it's irrelevant, takes images
+time.sleep(15)  # Ensure parachute and everything is cleared before initializing camera servos
 counter = 0
-
-t = time.time()
-while is_deployed:
-    if time.time() - t > 5:  # TODO Remove
+while True:  # TODO have a manual way to exit loops, save data (Switch)
+    logging.info("GPS: " + str(main.arduino.get_lattitude) + ", " + str(main.arduino.get_longitude))
+    if main.is_at_low_altitude():
+        logging.info("Below 10m, Quiting!")
         break
-    '''if main.arduino.get_altitude() < 10:
-        false_positive = False
-        for i in range(0, 10):
-            if main.arduino.get_altitude() > 10:  # So a goofy missread doesn't screw us
-                false_positive = True
-        if not false_positive:
-            logging.info("Below 10m, Quiting!")
-            break'''
     main.run(counter)
     counter += 1
 
+main.arduino.shutdown()
 main.processor.scores = sorted(main.processor.scores)
 logging.info("Scores (First is best): " + str(main.processor.scores))
-
