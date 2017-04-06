@@ -24,3 +24,4 @@
 4) When lander is put inside, detects via photoresistor. All lights and buzzer sounds 10 short pulses(5 secs total).
 5) When lander is ejected, 5 second buzzer sounds.
 6) When on ground buzzer stays on indefinitely
+7) When lander is found, turn switch off. This force ends program, ensuring data is saved
