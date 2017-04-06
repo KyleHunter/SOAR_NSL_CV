@@ -19,13 +19,13 @@ import RPi.GPIO as GPIO
 class main:
     def __init__(self):
         """
-        Set's up program variables, resets files, does not tell arduino to start
+        Sets up program variables, resets files, does not tell arduino to start
         """
+        GPIO.setmode(GPIO.BCM)
         self.ei = ErrorIndicator(False)
         self.ih = ImageHandler(False, self.ei)
         self.processor = ImageProcessor(self.ih, self.ei)
         self.arduino = Arduino(self.ei)
-        GPIO.setmode(GPIO.BCM)
         GPIO.setup(24, GPIO.IN, pull_up_down=GPIO.PUD_UP)
         GPIO.setup(25, GPIO.IN)
         GPIO.setwarnings(False)
