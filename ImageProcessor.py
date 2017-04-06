@@ -11,13 +11,15 @@ import collections
 import warnings
 import logging
 import os
+import time
 
 
 class ImageProcessor:
     def __init__(self, ih, ei):
         self.ImageHandler = ih
         self.processed_image, self.grayscale_image, self.hsv_image, self.contours, self.mask, self.threshold_image, \
-            self.tarp_masks, self.ei, self.scores = None, None, None, [], None, None, [0, 0, 0], ei, []
+            self.tarp_masks, self.ei, self.scores, self.cnt_area \
+            = None, None, None, [], None, None, [0, 0, 0], ei, [], None
 
     def filter_hsv(self, lower, upper):
         self.processed_image = cv2.inRange(self.hsv_image, lower, upper)
@@ -38,14 +40,23 @@ class ImageProcessor:
         _, self.threshold_image = cv2.threshold(self.grayscale_image, 1, 255, cv2.THRESH_BINARY)
         logging.info("threshold_image(is None): " + str(self.threshold_image is None))
 
-    def filter_by_size(self, size):
+    def filter_by_size(self, calc_total_area):
         _, contours, _ = cv2.findContours(self.threshold_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         logging.info("contours(is None): " + str(self.contours is None))
-        i = 0
-        for c in contours:
-            if size[0] < cv2.contourArea(c) < size[1]:
-                cv2.drawContours(self.processed_image, contours, i, (255, 255, 255), -1)
-            i += 1
+        i, contour_matches = 0, 0
+        t = time.time()
+        size = [0.98 * calc_total_area, calc_total_area]
+        while contour_matches == 0 and (time.time() - t < 2):
+            i = 0
+            for c in contours:
+                if size[0] < cv2.contourArea(c) < size[1]:
+                    cv2.drawContours(self.processed_image, contours, i, (255, 255, 255), -1)
+                    contour_matches += 1
+                    self.cnt_area = cv2.contourArea(c)
+                size = [size[0] * 0.99, size[1] * 1.001]  # Bias looking for smaller sizes due to area approximation
+                i += 1
+
+        logging.info("Number of contour size matches: " + str(contour_matches))
         self.grayscale_image = cv2.cvtColor(self.processed_image, cv2.COLOR_BGR2GRAY)
         logging.info("grayscale(is None): " + str(self.grayscale_image is None))
         _, self.mask = cv2.threshold(self.grayscale_image, 254, 255, cv2.THRESH_BINARY)
@@ -71,7 +82,7 @@ class ImageProcessor:
         else:
             logging.info("Too many bins found..")
 
-    def save_tarps(self, counter, size):
+    def save_tarps(self, counter):
         files = ['yellow', 'blue', 'red']
         s, cnt_areas = 0, [0, 0, 0]
         os.makedirs("out/" + str(counter))
@@ -83,14 +94,13 @@ class ImageProcessor:
             h = 0
 
             for c in cnts:
-                if cv2.contourArea(c) > size * 0.2:
+                if cv2.contourArea(c) > (self.cnt_area / 3) * 0.3:
                     cv2.drawContours(img, cnts, h, (0, 255, 0), 2)
                     cnt_areas[s] = cv2.contourArea(c)
                 h += 1
             s += 1
 
             img = cv2.resize(img, (0, 0), fx=0.5, fy=0.5)
-
             cv2.imwrite("out/" + str(counter) + "/" + str(files[i]) + ".png", img)
         score = np.ptp(cnt_areas)
         self.scores.append(score)
@@ -98,7 +108,7 @@ class ImageProcessor:
 
     @staticmethod
     def get_section_numbers(coll):
-        nums = [coll[x][0] for x in range(0, len(coll)) if coll[x][1] > 30]  #  Only gets Hues with frequency > 30
+        nums = [coll[x][0] for x in range(0, len(coll)) if coll[x][1] > 30]  # Only gets Hues with frequency > 30
         nums = np.sort(nums)
         means = np.zeros((50, 50))
         i, j = 0, 0
