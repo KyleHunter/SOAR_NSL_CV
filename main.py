@@ -254,4 +254,3 @@ main.arduino.shutdown()
 main.processor.scores = sorted(main.processor.scores)
 logging.info("Scores (First is best): " + str(main.processor.scores))
 
-main.ei.turn_buzzer_on()
