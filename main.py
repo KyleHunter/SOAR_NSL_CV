@@ -130,7 +130,24 @@ class main:
 
     def starting_notification(self):
         self.ei.message([1, 1, 1, 1])
+        self.ei.turn_buzzer_on()
         time.sleep(5)
+        self.ei.turn_buzzer_off()
+        self.ei.reset()
+
+    def second_notification(self):
+        for i in range(0, 10)
+        self.ei.message([1, 1, 1, 1])
+        self.ei.turn_buzzer_on()
+        time.sleep(0.5)
+        self.ei.turn_buzzer_off()
+        self.ei.reset()
+
+    def third_notification(self):
+        self.ei.message([1, 1, 1, 1])
+        self.ei.turn_buzzer_on()
+        time.sleep(5)
+        self.ei.turn_buzzer_off()
         self.ei.reset()
 
     @staticmethod
@@ -170,11 +187,11 @@ main = main()
 #  Waits for switch to tell Pi to have everything start
 while not main.told_to_start():
     time.sleep(3)
+logging.info("Initializing main")
 main.starting_notification()
 
 
 #  Starts Arduino and does initial check of all systems (Not looking for GPS fix)
-logging.info("Initializing main")
 if not main.init():
     while not main.check_arduino(False) or not main.check_pi():
         time.sleep(3)
@@ -199,11 +216,12 @@ while not main.is_in_rocket():
     if main.told_to_end():  # Just in case..
         break
 logging.info("Inside Rocket")
+main.second_notification()
 
 
 #  Lander is inside rocket, still checks for errors with arduino(Can hear buzzer)
 while main.is_in_rocket():
-    logging.info("Waiting for Erection")
+    logging.info("Waiting for Ejection")
     if not main.arduino.gps_has_fix():
         logging.info("Inside rocket, no GPS fix..")
     if main.check_arduino(False):
@@ -213,10 +231,10 @@ while main.is_in_rocket():
     if main.told_to_end():  # Just in case..
         break
 logging.info("Ejected!")
-
+main.third_notification()
 
 #  Lander is outside rocket, no error checks as it's irrelevant, takes images
-time.sleep(15)  # Ensure parachute and everything is cleared before initializing camera servos
+time.sleep(15)  # Ensure parachute and everything is cleared before initializing camera servos TODO Determine how long
 counter = 0
 while True:
     loop_time = time.time()
@@ -236,6 +254,4 @@ main.arduino.shutdown()
 main.processor.scores = sorted(main.processor.scores)
 logging.info("Scores (First is best): " + str(main.processor.scores))
 
-main.arduino.shutdown()
-main.processor.scores = sorted(main.processor.scores)
-logging.info("Scores (First is best): " + str(main.processor.scores))
+main.ei.turn_buzzer_on()

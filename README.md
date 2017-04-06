@@ -15,3 +15,12 @@
 - 1010: No clue, bad exception error
 - 0001(Solid): No error, GPS fixed
 - 1111(Solid): Waiting for start command
+
+## Starting procedure
+
+1) Give everything power, system is in standby mode
+2) Turn on switch one. All lights and buzzer sound for 5 seconds
+3) Now camera and all arduino sensors are active, servos retracted, and error checking is occurring
+4) When lander is put inside, detects via photoresistor. All lights and buzzer sounds 10 short pulses(5 secs total).
+5) When lander is ejected, 5 second buzzer sounds.
+6) When on ground buzzer stays on indefinitely
