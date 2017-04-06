@@ -137,11 +137,11 @@ class main:
 
     def second_notification(self):
         for i in range(0, 10)
-        self.ei.message([1, 1, 1, 1])
-        self.ei.turn_buzzer_on()
-        time.sleep(0.5)
-        self.ei.turn_buzzer_off()
-        self.ei.reset()
+            self.ei.message([1, 1, 1, 1])
+            self.ei.turn_buzzer_on()
+            time.sleep(0.5)
+            self.ei.turn_buzzer_off()
+            self.ei.reset()
 
     def third_notification(self):
         self.ei.message([1, 1, 1, 1])
