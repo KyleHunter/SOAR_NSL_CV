@@ -27,10 +27,18 @@ class ErrorIndicator:
                 GPIO.output(self.LEDPINS[led_num], GPIO.LOW)
 
     @staticmethod
-    def _sound_buzzer(binary_order):  # Buzzer hot to GPIO 23
+    def turn_buzzer_on():
+        GPIO.output(23, GPIO.HIGH)
+
+    @staticmethod
+    def turn_buzzer_off():
+        GPIO.output(23, GPIO.LOW)
+
+    def _sound_buzzer(self, binary_order):  # Buzzer hot to GPIO 23
         if binary_order == [0, 0, 0, 0] or binary_order == [0, 0, 0, 1]:
-            GPIO.GPIO.output(23, GPIO.LOW)
-        GPIO.GPIO.output(23, GPIO.HIGH)
+            self.turn_buzzer_off()
+        else:
+            self.turn_buzzer_on()
 
     def message(self, binary_order):
         self._sound_buzzer(binary_order)
