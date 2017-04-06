@@ -168,8 +168,10 @@ class main:
 main = main()
 
 #  Waits for switch to tell Pi to have everything start
-if not main.told_to_start():
+while not main.told_to_start():
     time.sleep(3)
+main.starting_notification()
+
 
 #  Starts Arduino and does initial check of all systems (Not looking for GPS fix)
 logging.info("Initializing main")
@@ -177,7 +179,10 @@ if not main.init():
     while not main.check_arduino(False) or not main.check_pi():
         time.sleep(3)
         logging.info("Arduino or Pi have errors..")
+        if main.told_to_end():  # Just in case..
+            break
 logging.info("Main Initialized")
+
 
 #  Waits outside rocket, checking for errors and GPS fix
 while not main.is_in_rocket():
@@ -191,7 +196,10 @@ while not main.is_in_rocket():
     else:
         logging.info("Arduino or Pi have errors..")
     time.sleep(3)
+    if main.told_to_end():  # Just in case..
+        break
 logging.info("Inside Rocket")
+
 
 #  Lander is inside rocket, still checks for errors with arduino(Can hear buzzer)
 while main.is_in_rocket():
@@ -202,18 +210,31 @@ while main.is_in_rocket():
         main.ei.message([0, 0, 0, 0])  # Can't see the error anyway..
         logging.info("Inside Rocket, error with Arduino")
     time.sleep(3)
+    if main.told_to_end():  # Just in case..
+        break
 logging.info("Ejected!")
+
 
 #  Lander is outside rocket, no error checks as it's irrelevant, takes images
 time.sleep(15)  # Ensure parachute and everything is cleared before initializing camera servos
 counter = 0
-while True:  # TODO have a manual way to exit loops, save data (Switch)
+while True:
+    loop_time = time.time()
     logging.info("GPS: " + str(main.arduino.get_lattitude) + ", " + str(main.arduino.get_longitude))
     if main.is_at_low_altitude():
         logging.info("Below 10m, Quiting!")
         break
     main.run(counter)
     counter += 1
+    if main.told_to_end():  # Just in case..
+        break
+    while time.time() - loop_time < 1:  # Sleep a min of 1 sec
+        time.sleep(0.1)
+
+
+main.arduino.shutdown()
+main.processor.scores = sorted(main.processor.scores)
+logging.info("Scores (First is best): " + str(main.processor.scores))
 
 main.arduino.shutdown()
 main.processor.scores = sorted(main.processor.scores)
