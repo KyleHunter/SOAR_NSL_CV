@@ -16,7 +16,7 @@ class ImageHandler:
         self.take_image()
 
     def camera_error(self):
-        if self.is_valid_image():
+        if self.is_valid_image():# Try catch for usb TODO
             logging.info("Camera took valid image, no error")
             return False
         else:
@@ -47,7 +47,7 @@ class ImageHandler:
             return True
         else:
             cap = cv2.VideoCapture(0)
-            for i in range(0, 3):  # First couple frames are garbage
+            for i in range(0, 10):  # First couple frames are garbage
                 _, self._original_image = cap.read()
             self.out_image = self._original_image
             cap.release()
