@@ -136,7 +136,7 @@ class main:
         self.ei.reset()
 
     def second_notification(self):
-        for i in range(0, 10)
+        for i in range(0, 10):
             self.ei.message([1, 1, 1, 1])
             self.ei.turn_buzzer_on()
             time.sleep(0.5)
