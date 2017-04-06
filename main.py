@@ -97,28 +97,41 @@ class main:
         current_distance = self.arduino.get_distance() * 3.28084  # ft
         logging.info("Current Distance: " + str(current_distance))
 
-        total_tarp_are = Tc.get_total_tarp_area(current_altitude, current_distance)  # pixels^3
-        single_tarp_area = Tc.get_tarp_area(current_altitude, current_distance)  # pixels^3
+        total_tarp_area = Tc.get_total_tarp_area(current_altitude, current_distance)  # pixels^3
 
         logging.info("Creating Background Mask")
         self.processor.create_background_mask()
         logging.info("Filtering by size")
-        self.processor.filter_by_size((total_tarp_are * 0.6,
-                                       total_tarp_are))  # 0.007 TODO allow method to control size and adjust like blur_thresh
+        self.processor.filter_by_size(total_tarp_area)
         logging.info("Getting Tarp Mask")
         self.processor.get_tarps()
         logging.info("Saving Tarps")
-        self.processor.save_tarps(count, single_tarp_area)
+        self.processor.save_tarps(count)
 
     @staticmethod
     def told_to_start():  # Wire GPIO 24 to button to ground
         """
         Determines if switch is on, telling us to start the arduino and enter standby
-        :return: True if switch is pressed
+        :return: True if switch is closed
         """
         if not GPIO.input(24):
             return True
         return False
+
+    @staticmethod
+    def told_to_end():  # Wire GPIO 24 to button to ground
+        """
+        Determines if switch is off, telling us to ensure loops are ended and to save log
+        :return: True if switch is open
+        """
+        if GPIO.input(24):
+            return True
+        return False
+
+    def starting_notification(self):
+        self.ei.message([1, 1, 1, 1])
+        time.sleep(5)
+        self.ei.reset()
 
     @staticmethod
     def is_in_rocket():  # Connect photoresistor to GPIO 25
