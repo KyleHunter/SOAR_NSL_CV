@@ -150,6 +150,16 @@ class main:
         self.ei.turn_buzzer_off()
         self.ei.reset()
 
+    def in_rocket_buzz(self):
+        self.ei.turn_buzzer_on()
+        time.sleep(1)
+        self.ei.turn_buzzer_off()
+        time.sleep(0.5)
+        self.ei.turn_buzzer_on()
+        time.sleep(2)
+        self.ei.turn_buzzer_off()
+        self.ei.reset()
+
     @staticmethod
     def is_in_rocket():  # Connect photoresistor to GPIO 25
         """
@@ -222,11 +232,13 @@ main.second_notification()
 #  Lander is inside rocket, still checks for errors with arduino(Can hear buzzer)
 while main.is_in_rocket():
     logging.info("Waiting for Ejection")
-    if not main.arduino.gps_has_fix():
+    if not main.arduino.gps_has_fix():  # Definitely an error since we had a fix before
         logging.info("Inside rocket, no GPS fix..")
-    if main.check_arduino(False):
+        main.in_rocket_buzz()
+    if main.check_arduino(False) or not main.check_pi():
         main.ei.message([0, 0, 0, 0])  # Can't see the error anyway..
         logging.info("Inside Rocket, error with Arduino")
+        main.in_rocket_buzz()
     time.sleep(3)
     if main.told_to_end():  # Just in case..
         break
