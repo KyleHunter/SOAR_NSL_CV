@@ -39,18 +39,27 @@ class main:
         logging.basicConfig(filename='log.txt', level=logging.DEBUG,
                             format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
-    def check_for_gps_fix(self):
+    def check_for_gps_fix(self, in_rocket):
         """
         Checks for GPS fix, flashes error if not
+        :param in_rocket: True if in rocket
         :return: True if GPS has a fix
         """
         if not main.arduino.gps_has_fix():
             logging.info("Waiting for GPS fix..")
-            self.ei.message([0, 0, 0, 1])
-            time.sleep(0.5)
-            self.ei.message([0, 0, 0, 0])
-            time.sleep(0.5)
-            return False
+            if not in_rocket:
+                self.ei.message([0, 0, 0, 1])
+                time.sleep(0.5)
+                self.ei.reset()
+                time.sleep(0.5)
+                return False
+            else:
+                for i in range(0, 3):
+                    self.ei.turn_buzzer_on()
+                    time.sleep(1)
+                    self.ei.turn_buzzer_off()
+                    time.sleep(0.5)
+                return False
         return True
 
     def check_arduino(self, initial):
@@ -150,6 +159,11 @@ class main:
         self.ei.turn_buzzer_off()
         self.ei.reset()
 
+    def in_rocket_buzz(self):
+        self.ei.turn_buzzer_on()
+        time.sleep(3)
+        self.ei.turn_buzzer_off()
+
     @staticmethod
     def is_in_rocket():  # Connect photoresistor to GPIO 25
         """
@@ -204,8 +218,7 @@ logging.info("Main Initialized")
 #  Waits outside rocket, checking for errors and GPS fix
 while not main.is_in_rocket():
     logging.info("Waiting to be inside rocket")
-    while not main.arduino.gps_has_fix():
-        main.check_for_gps_fix()
+    while not main.check_for_gps_fix(False):
         logging.info("Outside rocket, no GPS fix..")
 
     if main.check_arduino(False) and main.check_pi():
@@ -222,11 +235,12 @@ main.second_notification()
 #  Lander is inside rocket, still checks for errors with arduino(Can hear buzzer)
 while main.is_in_rocket():
     logging.info("Waiting for Ejection")
-    if not main.arduino.gps_has_fix():
+    if not main.check_for_gps_fix(True):  # Definitely an error since we had a fix before
         logging.info("Inside rocket, no GPS fix..")
-    if main.check_arduino(False):
+    if main.check_arduino(False) or not main.check_pi():
         main.ei.message([0, 0, 0, 0])  # Can't see the error anyway..
         logging.info("Inside Rocket, error with Arduino")
+        main.in_rocket_buzz()
     time.sleep(3)
     if main.told_to_end():  # Just in case..
         break
