@@ -6,7 +6,7 @@ class Arduino:
     bus = smbus.SMBus(1)
     address = 0x04
     ALTREQ, ERRORCODEREQ, DISTREQ, INITREQ, INITDOFREQ, INITGPSREQ, GPSFIXREQ, SHUTDOWNREQ, LATREQ, LONREQ, \
-        ISDEPLOYEDREQ, ORIENTATIONSREQ = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
+        ISDEPLOYEDREQ, ORIENTATIONSREQONE, ORIENTATIONSREQTWO, ORIENTATIONSREQTHREE = 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
 
     def __init__(self, ei):
         self.ei = ei
@@ -19,38 +19,37 @@ class Arduino:
     def convert_from_chars(item_array):
         return "".join([chr(i) for i in item_array])
 
-    def read_bytes(self):
-        char_array, curr_char = [], -1
+    def read_bytes(self, cmd):
+        char_array = self.bus.read_i2c_block_data(self.address, cmd)
+        new_array = []
+        for i in char_array:
+            if i is 0:
+                break
+            new_array.append(i)
 
-        while curr_char is not 0:
-            curr_char = self._read_byte()
-            if curr_char is not 0:
-                char_array.append(curr_char)
-
-        return self.convert_from_chars(char_array)
+        return self.convert_from_chars(new_array)
 
     def _write_byte(self, value):
         self.bus.write_byte(self.address, value)
         time.sleep(0.05)
 
     def _read_byte(self):
-        return self.bus.read_byte(self.address)
+        try:
+            return self.bus.read_byte(self.address)
+        except:
+            print("Caught")
 
     def get_lattitude(self):
-        self._write_byte(self.LATREQ)
-        return self.read_bytes()
+        return self.read_bytes(self.LATREQ)
 
     def get_longitude(self):
-        self._write_byte(self.LONREQ)
-        return self.read_bytes()
+        return self.read_bytes(self.LONREQ)
 
     def get_altitude(self):
-        self._write_byte(self.ALTREQ)
-        return self.read_bytes()
+        return self.read_bytes(self.ALTREQ)
 
     def get_distance(self):
-        self._write_byte(self.DISTREQ)
-        return self.read_bytes()
+        return self.read_bytes(self.DISTREQ)
 
     def get_dof_error(self):
         self._write_byte(self.INITDOFREQ)
@@ -72,10 +71,11 @@ class Arduino:
         self._write_byte(self.SHUTDOWNREQ)
 
     def get_orientations(self):
-        self._write_byte(self.ORIENTATIONSREQ)
-        or_zero = self.read_bytes()
-        or_one = self.read_bytes()
-        or_two = self.read_bytes()
+        or_zero = self.read_bytes(self.ORIENTATIONSREQONE)
+        time.sleep(0.1)
+        or_one = self.read_bytes(self.ORIENTATIONSREQTWO)
+        time.sleep(0.1)
+        or_two = self.read_bytes(self.ORIENTATIONSREQTHREE)
         return or_zero, or_one, or_two
 
     def init(self):
