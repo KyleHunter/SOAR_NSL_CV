@@ -202,7 +202,8 @@ logging.info("Main Initialized")
 
 
 #  Waits outside rocket, checking for errors and GPS fix
-while not main.is_in_rocket():
+in_count = 0
+while in_count < 20:  # 20*3 = 60s of consistent darkness
     logging.info("Waiting to be inside rocket")
     while not main.arduino.gps_has_fix():
         main.check_for_gps_fix()
@@ -215,6 +216,10 @@ while not main.is_in_rocket():
     time.sleep(3)
     if main.told_to_end():  # Just in case..
         break
+    if main.is_in_rocket():
+        in_count += 1
+    else:
+        in_count = 0
 logging.info("Inside Rocket")
 main.second_notification()
 
