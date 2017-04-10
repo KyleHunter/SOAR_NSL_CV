@@ -10,19 +10,16 @@ import TarpCalculation as Tc
 from Arduino import Arduino
 from ErrorIndicator import ErrorIndicator
 import time
+import logging
 import os
 import shutil
 import RPi.GPIO as GPIO
-import Log
-import logging
-
-main_logger, orientation_logger = logging.getLogger("SOAR.main_logger"), logging.getLogger("SOAR.orientation_logger")
 
 
 class main:
     def __init__(self):
         """
-        Set's up program variables, resets files, does not tell arduino to start
+        Sets up program variables, resets files, does not tell arduino to start
         """
         GPIO.setmode(GPIO.BCM)
         self.ei = ErrorIndicator(False)
@@ -39,7 +36,8 @@ class main:
         if os.path.exists("log.txt"):
             os.remove("log.txt")
 
-        Log.setup_log()
+        logging.basicConfig(filename='log.txt', level=logging.DEBUG,
+                            format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 
     def check_for_gps_fix(self):
         """
@@ -47,7 +45,7 @@ class main:
         :return: True if GPS has a fix
         """
         if not main.arduino.gps_has_fix():
-            main_logger.info("Waiting for GPS fix..")
+            logging.info("Waiting for GPS fix..")
             self.ei.message([0, 0, 0, 1])
             time.sleep(0.5)
             self.ei.message([0, 0, 0, 0])
@@ -92,22 +90,22 @@ class main:
         Method run while lander is in decent
         :param count: Number of loops called (Used for logger)
         """
-        main_logger.info("*********************" + str(count) + "*********************")
+        logging.info("*********************" + str(count) + "*********************")
         current_altitude = self.arduino.get_altitude() * 3.28084  # ft
-        main_logger.info("Current Altitude: " + str(current_altitude))
+        logging.info("Current Altitude: " + str(current_altitude))
 
         current_distance = self.arduino.get_distance() * 3.28084  # ft
-        main_logger.info("Current Distance: " + str(current_distance))
+        logging.info("Current Distance: " + str(current_distance))
 
         total_tarp_area = Tc.get_total_tarp_area(current_altitude, current_distance)  # pixels^3
 
-        main_logger.info("Creating Background Mask")
+        logging.info("Creating Background Mask")
         self.processor.create_background_mask()
-        main_logger.info("Filtering by size")
+        logging.info("Filtering by size")
         self.processor.filter_by_size(total_tarp_area)
-        main_logger.info("Getting Tarp Mask")
+        logging.info("Getting Tarp Mask")
         self.processor.get_tarps()
-        main_logger.info("Saving Tarps")
+        logging.info("Saving Tarps")
         self.processor.save_tarps(count)
 
     @staticmethod
@@ -189,7 +187,7 @@ main = main()
 #  Waits for switch to tell Pi to have everything start
 while not main.told_to_start():
     time.sleep(3)
-main_logger.info("Initializing main")
+logging.info("Initializing main")
 main.starting_notification()
 
 
@@ -197,60 +195,52 @@ main.starting_notification()
 if not main.init():
     while not main.check_arduino(False) or not main.check_pi():
         time.sleep(3)
-        main_logger.info("Arduino or Pi have errors..")
+        logging.info("Arduino or Pi have errors..")
         if main.told_to_end():  # Just in case..
             break
-main_logger.info("Main Initialized")
+logging.info("Main Initialized")
 
 
 #  Waits outside rocket, checking for errors and GPS fix
-in_count = 0
-while in_count < 20:  # 20*3 = 60s of consistent darkness
-    main_logger.info("Waiting to be inside rocket")
+while not main.is_in_rocket():
+    logging.info("Waiting to be inside rocket")
     while not main.arduino.gps_has_fix():
         main.check_for_gps_fix()
-        main_logger.info("Outside rocket, no GPS fix..")
+        logging.info("Outside rocket, no GPS fix..")
 
     if main.check_arduino(False) and main.check_pi():
         main.ei.message([0, 0, 0, 1])
     else:
-        main_logger.info("Arduino or Pi have errors..")
+        logging.info("Arduino or Pi have errors..")
     time.sleep(3)
     if main.told_to_end():  # Just in case..
         break
-    if main.is_in_rocket():
-        in_count += 1
-    else:
-        in_count = 0
-main_logger.info("Inside Rocket")
+logging.info("Inside Rocket")
 main.second_notification()
 
 
 #  Lander is inside rocket, still checks for errors with arduino(Can hear buzzer)
 while main.is_in_rocket():
-    main_logger.info("Waiting for Ejection")
+    logging.info("Waiting for Ejection")
     if not main.arduino.gps_has_fix():
-        main_logger.info("Inside rocket, no GPS fix..")
+        logging.info("Inside rocket, no GPS fix..")
     if main.check_arduino(False):
         main.ei.message([0, 0, 0, 0])  # Can't see the error anyway..
-        main_logger.info("Inside Rocket, error with Arduino")
+        logging.info("Inside Rocket, error with Arduino")
     time.sleep(3)
     if main.told_to_end():  # Just in case..
         break
-main_logger.info("Ejected!")
+logging.info("Ejected!")
 main.third_notification()
 
 #  Lander is outside rocket, no error checks as it's irrelevant, takes images
 time.sleep(15)  # Ensure parachute and everything is cleared before initializing camera servos TODO Determine how long
 counter = 0
-start_time = time.time()
 while True:
-    run_time = time.time() - start_time
     loop_time = time.time()
-    main_logger.info("GPS: " + str(main.arduino.get_lattitude) + ", " + str(main.arduino.get_longitude))
-    orientation_logger.info(Log.o_format(run_time, main.arduino.get_orientations()))
+    logging.info("GPS: " + str(main.arduino.get_lattitude) + ", " + str(main.arduino.get_longitude))
     if main.is_at_low_altitude():
-        main_logger.info("Below 10m, Quiting!")
+        logging.info("Below 10m, Quiting!")
         break
     main.run(counter)
     counter += 1
@@ -262,5 +252,4 @@ while True:
 
 main.arduino.shutdown()
 main.processor.scores = sorted(main.processor.scores)
-main_logger.info("Scores (First is best): " + str(main.processor.scores))
-
+logging.info("Scores (First is best): " + str(main.processor.scores))
