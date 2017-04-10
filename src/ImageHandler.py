@@ -9,6 +9,8 @@ import cv2
 import numpy as np
 import logging
 
+main_logger = logging.getLogger("SOAR.main_logger")
+
 
 class ImageHandler:
     def __init__(self, testing, ei):
@@ -17,7 +19,7 @@ class ImageHandler:
 
     def camera_error(self):
         if self.is_valid_image():# Try catch for usb TODO
-            logging.info("Camera took valid image, no error")
+            main_logger.info("Camera took valid image, no error")
             return False
         else:
             return True
@@ -26,11 +28,11 @@ class ImageHandler:
         focus = cv2.Laplacian(self.cvt_to_grayscale(), cv2.CV_64F).var()
         if focus < self.blur_thresh:
             self.blur_thresh += 20  # Ensure we at least take some pics..
-            logging.info("Blurry image, blur_thresh = " + str(self.blur_thresh))
+            main_logger.info("Blurry image, blur_thresh = " + str(self.blur_thresh))
             return True
         else:
             self.blur_thresh = 100
-            logging.info("Clear image, blur_thresh = " + str(self.blur_thresh))
+            main_logger.info("Clear image, blur_thresh = " + str(self.blur_thresh))
             return False
 
     def is_valid_image(self):

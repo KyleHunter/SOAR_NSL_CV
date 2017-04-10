@@ -13,6 +13,8 @@ import logging
 import os
 import time
 
+main_logger, orientation_logger = logging.getLogger("SOAR.main_logger"), logging.getLogger("SOAR.orientation_logger")
+
 
 class ImageProcessor:
     def __init__(self, ih, ei):
@@ -33,16 +35,16 @@ class ImageProcessor:
         self.hsv_image = self.ImageHandler.cvt_to_hsv()
         h_high = self.get_hsv_avg()[0] + 5
         self.mask = cv2.inRange(self.hsv_image, (h_high, 0, 0), (180, 255, 255))  # Creates mask removing background
-        logging.info("Mask(is None): " + str(self.mask is None))
+        main_logger.info("Mask(is None): " + str(self.mask is None))
         self.processed_image = cv2.bitwise_and(self.hsv_image, self.hsv_image, mask=self.mask)
-        logging.info("processed_image(is None): " + str(self.processed_image is None))
+        main_logger.info("processed_image(is None): " + str(self.processed_image is None))
         self.grayscale_image = cv2.cvtColor(self.processed_image, cv2.COLOR_BGR2GRAY)
         _, self.threshold_image = cv2.threshold(self.grayscale_image, 1, 255, cv2.THRESH_BINARY)
-        logging.info("threshold_image(is None): " + str(self.threshold_image is None))
+        main_logger.info("threshold_image(is None): " + str(self.threshold_image is None))
 
     def filter_by_size(self, calc_total_area):
         _, contours, _ = cv2.findContours(self.threshold_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        logging.info("contours(is None): " + str(self.contours is None))
+        main_logger.info("contours(is None): " + str(self.contours is None))
         i, contour_matches = 0, 0
         t = time.time()
         size = [0.98 * calc_total_area, calc_total_area]
@@ -56,16 +58,16 @@ class ImageProcessor:
                 size = [size[0] * 0.99, size[1] * 1.001]  # Bias looking for smaller sizes due to area approximation
                 i += 1
 
-        logging.info("Number of contour size matches: " + str(contour_matches))
+        main_logger.info("Number of contour size matches: " + str(contour_matches))
         self.grayscale_image = cv2.cvtColor(self.processed_image, cv2.COLOR_BGR2GRAY)
-        logging.info("grayscale(is None): " + str(self.grayscale_image is None))
+        main_logger.info("grayscale(is None): " + str(self.grayscale_image is None))
         _, self.mask = cv2.threshold(self.grayscale_image, 254, 255, cv2.THRESH_BINARY)
-        logging.info("mask(is None): " + str(self.mask is None))
+        main_logger.info("mask(is None): " + str(self.mask is None))
         # Creates mask without background & foreground outside of size
 
     def get_tarps(self):
         temp = cv2.bitwise_and(self.hsv_image, self.hsv_image, mask=self.mask)  # Masks off background on HSV image
-        logging.info("temp(is None): " + str(temp is None))
+        main_logger.info("temp(is None): " + str(temp is None))
         self.processed_image = temp
         y, x, _ = temp.shape
 
@@ -78,9 +80,9 @@ class ImageProcessor:
             for i in range(0, 3):  # y, b, r
                 self.tarp_masks[i] = cv2.inRange(self.processed_image,
                                                  (int(tarp_hues[i] - 10), 0, 0), (int(tarp_hues[i] + 10), 255, 255))
-            logging.info("Perfect, 3 bins found")
+            main_logger.info("Perfect, 3 bins found")
         else:
-            logging.info("Too many bins found..")
+            main_logger.info("Too many bins found..")
 
     def save_tarps(self, counter):
         files = ['yellow', 'blue', 'red']
@@ -90,7 +92,7 @@ class ImageProcessor:
         for i in range(0, 3):
             img = self.ImageHandler.out_image.copy()
             _, cnts, _ = cv2.findContours(self.tarp_masks[i].copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            logging.info("cnts(is None): " + str(cnts is None))
+            main_logger.info("cnts(is None): " + str(cnts is None))
             h = 0
 
             for c in cnts:
@@ -104,7 +106,7 @@ class ImageProcessor:
             cv2.imwrite("out/" + str(counter) + "/" + str(files[i]) + ".png", img)
         score = np.ptp(cnt_areas)
         self.scores.append(score)
-        logging.info("File: " + str(counter) + " Score: " + str(score))
+        main_logger.info("File: " + str(counter) + " Score: " + str(score))
 
     @staticmethod
     def get_section_numbers(coll):

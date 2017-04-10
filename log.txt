@@ -1,0 +1,18 @@
+04/05/2017 09:27:45 PM *********************1*********************
+04/05/2017 09:27:45 PM Creating Background Mask
+04/05/2017 09:27:45 PM Mask(is None): False
+04/05/2017 09:27:45 PM processed_image(is None): False
+04/05/2017 09:27:45 PM threshold_image(is None): False
+04/05/2017 09:27:45 PM Filtering by size
+04/05/2017 09:27:45 PM contours(is None): False
+04/05/2017 09:27:45 PM Number of contour size matches: 1
+04/05/2017 09:27:45 PM grayscale(is None): False
+04/05/2017 09:27:45 PM mask(is None): False
+04/05/2017 09:27:45 PM Getting Tarp Mask
+04/05/2017 09:27:45 PM temp(is None): False
+04/05/2017 09:27:45 PM Perfect, 3 bins found
+04/05/2017 09:27:45 PM Saving Tarps
+04/05/2017 09:27:45 PM cnts(is None): False
+04/05/2017 09:27:45 PM cnts(is None): False
+04/05/2017 09:27:45 PM cnts(is None): False
+04/05/2017 09:27:45 PM File: 1 Score: 237.5
